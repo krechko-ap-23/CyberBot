@@ -1,0 +1,30 @@
+# Виртуальное окружение
+venv/
+env/
+.venv/
+
+# Файлы Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# База данных (чтобы не тянуть тестовые логи)
+*.db
+*.sqlite3
+
+# Секреты и конфиги с паролями
+.env
+config.local.py
+
+# Графики и временные файлы
+*.png
+*.jpg
+logs/
+tmp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
