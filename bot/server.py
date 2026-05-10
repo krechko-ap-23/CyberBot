@@ -49,8 +49,18 @@ def receive_event():
     if not data or 'source_ip' not in data:
         return jsonify({"status": "error", "message": "Missing source_ip"}), 400
     
+    SEVERITY_MAP = {
+        'ssh_failed': 'CRITICAL',
+        'sudo_attempt': 'CRITICAL',
+        'http_attack': 'CRITICAL',
+        'ssh_success': 'WARNING',
+        'firewall_drop': 'WARNING',
+        'default': 'INFO'
+    }
+    
     geo = get_geo(data['source_ip'])
-    severity = "CRITICAL" if data.get('event_type') == 'ssh_failed' else ("WARNING" if data.get('event_type') == 'ssh_success' else "INFO")
+    event_type = data.get('event_type', 'unknown')
+    severity = SEVERITY_MAP.get(event_type, SEVERITY_MAP['default'])
     
     conn = get_db()
     conn.execute('''INSERT INTO events 
