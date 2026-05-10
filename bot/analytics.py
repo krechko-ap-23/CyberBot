@@ -68,11 +68,10 @@ def generate_attack_chart(hours=24) -> str:
     plt.savefig(CHART_PATH, bbox_inches='tight')
     plt.close(fig)
     
-    # Проверяем, что файл действительно создан
     if os.path.exists(CHART_PATH):
         print(f"График сохранён: {CHART_PATH} ({os.path.getsize(CHART_PATH)} байт)")
     else:
-        print("Ошибка: файл графика не создан!")
+        print("Ошибка: файл графика не создан")
         
     return CHART_PATH
 

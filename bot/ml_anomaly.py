@@ -56,7 +56,7 @@ def train_model(days=7):
     features, df, le_type, le_sev = prepare_features(events)
     
     if features is None or len(features) < 10:
-        return None, "Недостаточно данных для обучения ML (нужно минимум 10 событий)."
+        return None, "Недостаточно данных для обучения ML (нужно минимум 10 событий)"
 
     model = IsolationForest(contamination=0.15, random_state=42, n_estimators=100)
     model.fit(features)
@@ -78,7 +78,7 @@ def detect_anomalies(days=1):
     features, df, _, _ = prepare_features(events)
     
     if features is None or len(features) < 5:
-        return [], "Нет данных для анализа аномалий."
+        return [], "Нет данных для анализа аномалий"
 
     model, _, _, err = load_model()
     if err:

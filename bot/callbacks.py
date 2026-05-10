@@ -15,14 +15,14 @@ def handle_block_ip(ip):
                 (ip, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'SecBot manual block'))
     conn.commit()
     conn.close()
-    return {"message": f"✅ IP {ip} заблокирован (dry-run)"}
+    return {"message": f"IP {ip} заблокирован (dry-run)"}
 
 def handle_whitelist_ip(ip):
     conn = get_db()
     conn.execute('DELETE FROM blocked_ips WHERE ip = ?', (ip,))
     conn.commit()
     conn.close()
-    return {"message": f"✅ IP {ip} добавлен в whitelist"}
+    return {"message": f"IP {ip} добавлен в whitelist"}
 
 def get_ip_history(ip, limit=10):
     conn = get_db()
@@ -35,6 +35,6 @@ def get_inline_keyboard(ip, server_name):
     keyboard = [
         [InlineKeyboardButton("🚫 Заблокировать", callback_data=f"block_{ip}"),
          InlineKeyboardButton("✅ Whitelist", callback_data=f"whitelist_{ip}")],
-        [InlineKeyboardButton("📋 История", callback_data=f"history_{ip}")]
+        [InlineKeyboardButton("История", callback_data=f"history_{ip}")]
     ]
     return InlineKeyboardMarkup(keyboard)
