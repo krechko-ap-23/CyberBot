@@ -165,49 +165,6 @@ async def test_digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     await send_daily_digest(context)
 
 
-async def alerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("Доступ запрещён.", reply_markup=get_main_menu())
-        return
-    events = get_alerts(10)
-    if not events:
-        await update.message.reply_text("Тревог нет.", reply_markup=get_main_menu())
-        return
-    icon_map = {"CRITICAL": "🔴", "WARNING": "🟠"}
-    text = "Последние тревоги:\n" + "\n".join(
-        [f"{icon_map.get(e['severity'], '🟠')} {e['timestamp']} | {e['event_type']} | {e['source_ip']}" for e in events]
-    )
-    await update.message.reply_text(text, reply_markup=get_main_menu())
-
-
-async def top_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("Доступ запрещён.", reply_markup=get_main_menu())
-        return
-    rows = get_top_ips(10)
-    if not rows:
-        await update.message.reply_text("Данных нет.", reply_markup=get_main_menu())
-        return
-    text = "Топ-10 атакующих IP:\n" + "\n".join(
-        [f"{i}. {r['source_ip']} — {r['cnt']} попыток" for i, r in enumerate(rows, 1)]
-    )
-    await update.message.reply_text(text, reply_markup=get_main_menu())
-
-
-async def anomalies_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("Доступ запрещён.", reply_markup=get_main_menu())
-        return
-    status_msg = await update.message.reply_text("Ищу аномалии...", reply_markup=get_main_menu())
-    anomalies, err = detect_anomalies(days=1)
-    if err or not anomalies:
-        await status_msg.edit_text("Аномалий не обнаружено." if not err else err, reply_markup=get_main_menu())
-        return
-    text = "Аномалии:\n" + "\n".join(
-        [f"• {a['source_ip']} | {a['event_type']} | {a['reason']}" for a in anomalies[:5]]
-    )
-    await status_msg.edit_text(text, reply_markup=get_main_menu())
-
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -368,9 +325,6 @@ def main():
     application = Application.builder().token(TOKEN).post_init(post_init).build()
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("alerts", alerts_command))
-    application.add_handler(CommandHandler("top", top_command))
-    application.add_handler(CommandHandler("anomalies", anomalies_command))
     application.add_handler(CallbackQueryHandler(menu_callback, pattern="^cmd_"))
     application.add_handler(CallbackQueryHandler(button_callback, pattern="^(block|whitelist|history)_"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, any_message))

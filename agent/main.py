@@ -24,7 +24,6 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# --- Конфигурация из .env ---
 BOT_URL = os.getenv("BOT_URL", "").strip()
 SERVER_NAME = os.getenv("SERVER_NAME", socket.gethostname())
 API_SECRET = os.getenv("API_SECRET", "")
@@ -36,19 +35,18 @@ BUFFER_DB = os.path.join(os.path.dirname(__file__), "agent_buffer.db")
 
 
 def resolve_bot_url():
-    """Возвращает готовый URL сервера: из .env или через автопоиск."""
     if BOT_URL:
         log.info(f"BOT_URL из .env: {BOT_URL}")
         return BOT_URL
-    log.info("BOT_URL не задан, запускаю автопоиск...")
-    found = find_bot()
-    if found:
-        return found
-    log.error("Сервер не найден. Задай BOT_URL вручную в .env и перезапусти агент.")
-    raise SystemExit(1)
-
-
-# --- База буфера ---
+    retry = 0
+    while True:
+        retry += 1
+        log.info(f"BOT_URL не задан, запускаю автопоиск (попытка {retry})...")
+        found = find_bot()
+        if found:
+            return found
+        log.warning("Сервер не найден. Следующая попытка через 30 секунд...")
+        time.sleep(30)
 
 def init_buffer_db():
     conn = sqlite3.connect(BUFFER_DB)
@@ -68,9 +66,6 @@ def _headers():
     if API_SECRET:
         h["X-Secret-Key"] = API_SECRET
     return h
-
-
-# --- Отправка событий ---
 
 def send_to_bot(bot_url, event):
     try:
@@ -125,14 +120,37 @@ def flush_buffer(bot_url):
                 conn.commit()
                 flushed += 1
         except requests.exceptions.RequestException:
-            break  # сервер по-прежнему недоступен, прекращаем попытки
+            break 
 
     conn.close()
     if flushed:
         log.info(f"Из буфера отправлено: {flushed} событий")
 
+def block_ip(ip: str):
+    ret = os.system(f"sudo iptables -C INPUT -s {ip} -j DROP 2>/dev/null")
+    if ret != 0:
+        os.system(f"sudo iptables -A INPUT -s {ip} -j DROP")
+        log.info(f"iptables: заблокирован {ip}")
 
-# --- Heartbeat ---
+
+def block_sync_loop(bot_url):
+    applied = set()
+    while True:
+        try:
+            resp = requests.get(
+                f"{bot_url}/api/blocked",
+                headers=_headers(),
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                for ip in resp.json().get("blocked", []):
+                    if ip not in applied:
+                        block_ip(ip)
+                        applied.add(ip)
+        except requests.exceptions.RequestException:
+            log.warning("block_sync: сервер недоступен")
+        time.sleep(60)
+
 
 def heartbeat_loop(bot_url):
     while True:
@@ -148,14 +166,11 @@ def heartbeat_loop(bot_url):
             log.warning("Heartbeat потерян")
         time.sleep(HEARTBEAT_INTERVAL)
 
-
-# --- Детектирование брутфорса ---
 _fail_times: dict = defaultdict(list)
 _fail_lock = threading.Lock()
 
 
 def _record_fail(ip) -> int:
-    """Добавляет метку времени для IP и возвращает число попыток за окно."""
     now = time.time()
     with _fail_lock:
         _fail_times[ip] = [t for t in _fail_times[ip] if now - t < BRUTE_WINDOW]
@@ -167,15 +182,11 @@ def _clear_fail(ip):
     with _fail_lock:
         _fail_times.pop(ip, None)
 
-
-# --- Парсинг лога ---
-
 def parse_log(line: str):
     line = line.strip()
     if not line:
         return None
 
-    # SSH неудачный вход
     m = re.search(r"Failed password for (?:invalid user )?(\S+) from ([\d.]+)", line)
     if m:
         user, ip = m.group(1), m.group(2)
@@ -188,7 +199,6 @@ def parse_log(line: str):
             msg = f"{line} | попыток: {count}"
         return {"source_ip": ip, "message": msg, "event_type": etype, "server_name": SERVER_NAME}
 
-    # SSH успешный вход
     m = re.search(r"Accepted (?:password|publickey) for (\S+) from ([\d.]+)", line)
     if m:
         user, ip = m.group(1), m.group(2)
@@ -197,20 +207,14 @@ def parse_log(line: str):
         etype = "ssh_success_after_fail" if had_fails else "ssh_success"
         return {"source_ip": ip, "message": line, "event_type": etype, "server_name": SERVER_NAME}
 
-    # sudo
     m = re.search(r"sudo:\s+(\S+)\s+:.*COMMAND=(.*)", line)
     if m:
         return {"source_ip": "127.0.0.1", "message": line, "event_type": "sudo_attempt", "server_name": SERVER_NAME}
-
-    # firewall drop
     m = re.search(r"(?:firewalld|UFW BLOCK|kernel.*DROP).*SRC=([\d.]+)", line)
     if m:
         return {"source_ip": m.group(1), "message": line, "event_type": "firewall_drop", "server_name": SERVER_NAME}
 
     return None
-
-
-# --- Мониторинг лога ---
 
 def monitor(bot_url):
     if not os.path.exists(LOG_FILE):
@@ -231,21 +235,20 @@ def monitor(bot_url):
             else:
                 time.sleep(0.5)
                 flush_counter += 1
-                if flush_counter >= 10:  # каждые ~5 секунд простоя
+                if flush_counter >= 10: 
                     flush_buffer(bot_url)
                     flush_counter = 0
 
-
-# --- Точка входа ---
-
 def main():
-    log.info("=== CyberBot Agent запускается ===")
+    log.info("Agent запускается")
     init_buffer_db()
 
     bot_url = resolve_bot_url()
 
     threading.Thread(target=heartbeat_loop, args=(bot_url,), daemon=True).start()
     log.info(f"Heartbeat запущен (каждые {HEARTBEAT_INTERVAL}с)")
+    threading.Thread(target=block_sync_loop, args=(bot_url,), daemon=True).start()
+    log.info("Синхронизация блокировок запущена (каждые 60с)")
 
     flush_buffer(bot_url)
 

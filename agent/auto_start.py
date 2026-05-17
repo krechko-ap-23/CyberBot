@@ -29,10 +29,7 @@ def _probe(args):
 
 
 def find_bot(target_port=5000):
-    """
-    Ищет сервер CyberBot в локальной сети по порту.
-    Возвращает URL вида 'http://192.168.x.x:5000' или None.
-    """
+
     my_ip = get_local_ip()
     if not my_ip:
         print("[auto_start] Не удалось определить локальный IP.")
@@ -58,7 +55,6 @@ def find_bot(target_port=5000):
 
 
 def _save_to_env(url):
-    """Записывает найденный BOT_URL в .env, заменяя старое значение."""
     lines = []
     replaced = False
 

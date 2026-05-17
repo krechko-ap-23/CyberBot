@@ -122,6 +122,18 @@ def receive_heartbeat():
     return jsonify({"status": "ok"}), 200
 
 
+@app.route('/api/blocked', methods=['GET'])
+def get_blocked_ips():
+    err = _check_secret()
+    if err:
+        return err
+    conn = get_db()
+    cursor = conn.execute("SELECT ip FROM blocked_ips")
+    ips = [row['ip'] for row in cursor.fetchall()]
+    conn.close()
+    return jsonify({"blocked": ips}), 200
+
+
 def get_pending_notifications():
     conn = get_db()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -1,0 +1,18 @@
+[Unit]
+Description=CyberBot Security Agent
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=user
+WorkingDirectory=/home/user/cyberbot/agent
+ExecStart=/home/user/cyberbot/agent/venv/bin/python /home/user/cyberbot/agent/main.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cyberbot-agent
+
+[Install]
+WantedBy=multi-user.target
