@@ -111,12 +111,19 @@ def receive_heartbeat():
     if not data or 'server_name' not in data:
         return jsonify({"status": "error"}), 400
 
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    server_name = data['server_name']
+    os_name = data.get('os', 'unknown')
     conn = get_db()
-    conn.execute(
-        '''INSERT OR REPLACE INTO heartbeats (server_name, last_seen, is_online, os)
-        VALUES (?, ?, 1, ?)''',
-        (data['server_name'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"), data.get('os', 'unknown'))
-    )
+    updated = conn.execute(
+        'UPDATE heartbeats SET last_seen = ?, os = ? WHERE server_name = ?',
+        (now, os_name, server_name)
+    ).rowcount
+    if updated == 0:
+        conn.execute(
+            'INSERT INTO heartbeats (server_name, last_seen, is_online, os) VALUES (?, ?, 1, ?)',
+            (server_name, now, os_name)
+        )
     conn.commit()
     conn.close()
     return jsonify({"status": "ok"}), 200

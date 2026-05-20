@@ -259,10 +259,10 @@ async def check_heartbeats(context: ContextTypes.DEFAULT_TYPE):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    now = datetime.now()
     cursor.execute("SELECT server_name, last_seen, is_online FROM heartbeats")
     for s in cursor.fetchall():
         last_seen = datetime.strptime(s['last_seen'], "%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
         diff = (now - last_seen).total_seconds()
         if diff > 60 and s['is_online'] == 1:
             cursor.execute("UPDATE heartbeats SET is_online = 0 WHERE server_name = ?", (s['server_name'],))
