@@ -1,102 +1,90 @@
-CyberBot — Telegram-бот для мониторинга событий безопасности
-Система автоматизированного мониторинга событий информационной безопасности с оповещением через Telegram.
+## Данные об авторе
 
-Архитектура
+Кречко Ангелина Петровна
 
-Windows (сервер)         
-main.py                     
-Flask API :5000        
-Telegram Bot                 
-SQLite DB                      
+krechko_ap_23
 
-через  HTTP
+3 курс / 6 семестр
 
-Ubuntu (агент)
-agent/main.py  
-Мониторинг     
-/var/log/      
-auth.log       
+Кибербезопасность
 
+Вид проекта — курсовой работа 
 
-Возможности
-Мониторинг SSH-событий в реальном времени (/var/log/auth.log)
-Детектирование брутфорса (5+ попыток за 60 секунд)
-Классификация событий по уровням: CRITICAL / WARNING / INFO
-Геолокация атакующих IP (страна, город, провайдер)
-Heartbeat-мониторинг доступности серверов
-Интерактивные кнопки: блокировать IP, добавить в whitelist, история
-График активности атак за 24 часа
-Ежедневный дайджест в 09:00
-ML-модуль обнаружения аномалий (Isolation Forest)
-Буферизация событий при потере связи с сервером
-Автопоиск сервера в локальной сети
+# CyberBot — Telegram-бот для мониторинга событий безопасности
 
-1. Сервер (Windows)
-git clone https://github.com/твой-логин/CyberBot.git
+Программный комплекс для автоматизированного мониторинга событий информационной безопасности Linux-серверов с оповещением через Telegram в реальном времени. Система обнаруживает SSH-атаки, брутфорс, попытки эскалации привилегий и блокирует атакующих на уровне межсетевого экрана.
+
+## Требования
+
+* Python 3.11+
+* pip
+* Telegram-аккаунт и бот ([@BotFather](https://t.me/BotFather))
+* Linux-сервер с `/var/log/auth.log` (агент)
+
+##  Как запустить
+
+### 1. Клонируйте репозиторий (на Windows — сервер):
+
+git clone https://github.com/krechko-ap-23/CyberBot.git
 cd CyberBot
+
+### 2. Установите зависимости сервера:
+
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
+
+### 3. Настройте конфигурацию сервера:
+
 cp .env.example .env
 
-Заполни .env:
-TOKEN=токен_от_BotFather
-ADMIN_USER_ID=твой_telegram_id
-API_SECRET=придумай_секретный_ключ
-Запуск: python main.py
+Заполнить `.env`:
 
-2. Агент (Ubuntu)
+TOKEN=токен_от_BotFather
+ADMIN_USER_ID=ваш_telegram_id
+API_SECRET=секретный_ключ
+
+
+### 4. Запустите сервер:
+
+python main.py
+
+
+### 5. Установите агент (на Ubuntu):
+
 cd agent
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 
-Заполни .env:
-API_SECRET=тот_же_ключ_что_на_сервере
-SERVER_NAME=имя_этого_сервера
-Запуск:
-sudo venv/bin/python main.py
 
-! `sudo` нужен для чтения `/var/log/auth.log`. Если добавить пользователя в группу `adm` (`sudo usermod -aG adm $USER`), можно запускать без sudo.
+Заполнить `agent/.env`:
 
-3. Генерация тестовых событий (опционально)
+API_SECRET=тот_же_секретный_ключ
+SERVER_NAME=имя_сервера
+
+
+### 6. Запустите агент как системный сервис:
+
+sudo cp cyberbot-agent.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cyberbot-agent.service
+
+
+### 7. Генерация тестовых событий (опционально):
+
 cd agent
 source venv/bin/activate
 python generate_events.py
 
-Структура проекта
+## Зависимости 
 
-CyberBot/
-├── main.py              # Точка входа сервера (бот + Flask)
-├── requirements.txt     # Зависимости сервера
-├── .env.example         # Шаблон конфига сервера
-├── bot/
-   ├── server.py        # Flask API (приём событий)
-   ├── commands.py      # Запросы к БД
-   ├── callbacks.py     # Обработка inline-кнопок
-   ├── analytics.py     # Генерация графиков
-   ├── digest.py        # Ежедневный дайджест
-   ├── geo.py           # Геолокация IP
-   └── ml_anomaly.py    # ML-модуль (Isolation Forest)
-└── agent/
-    ├── main.py          # Агент мониторинга логов
-    ├── auto_start.py    # Автопоиск сервера в сети
-    ├── generate_events.py # Генератор тестовых событий
-    ├── requirements.txt
-    └── .env.example
-
-Команды бота
-
-/start  Открыть главное меню 
-/help Справка по командам |
-
-Технологии
-
-Python 3.11
-python-telegram-bot 20.7
-Flask 3.0
-SQLite3
-scikit-learn (Isolation Forest)
-matplotlib
-pandas / numpy
+* Python 3.11
+* python-telegram-bot 20.7
+* Flask 3.0
+* SQLite3
+* scikit-learn (Isolation Forest)
+* matplotlib
+* systemd
+* iptables
