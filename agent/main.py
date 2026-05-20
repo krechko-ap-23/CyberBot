@@ -209,7 +209,7 @@ def parse_log(line: str):
 
     m = re.search(r"sudo:\s+(\S+)\s+:.*COMMAND=(.*)", line)
     if m:
-        return {"source_ip": "127.0.0.1", "message": line, "event_type": "sudo_attempt", "server_name": SERVER_NAME}
+        return None
     m = re.search(r"(?:firewalld|UFW BLOCK|kernel.*DROP).*SRC=([\d.]+)", line)
     if m:
         return {"source_ip": m.group(1), "message": line, "event_type": "firewall_drop", "server_name": SERVER_NAME}
