@@ -53,7 +53,7 @@ python main.py
 
 ### 5. Установите агент (на Ubuntu):
 
-cd agent
+cd ~/cyberbot/agent
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -70,9 +70,11 @@ sudo cp cyberbot-agent.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now cyberbot-agent.service
 
+Проверить статус:
+sudo systemctl status cyberbot-agent
 
 ### 7. Генерация тестовых событий:
 
-cd agent
+cd ~/cyberbot/agent
 source venv/bin/activate
 python generate_events.py
